@@ -479,7 +479,7 @@ bool touchPanelInit(void)
 
 	if (strcmp((char *) tmp, "911") == 0)
 	{
-		//TRACE("GT911 chip detected");
+		TRACE("GT911 chip detected");
 		tmp[0] = 0X02;
 		if (!I2C_GT911_WriteRegister(GT_CTRL_REG, tmp, 1))
 		{
@@ -490,10 +490,10 @@ bool touchPanelInit(void)
 			TRACE("GT911 ERROR: configuration register read failed");
 		}
 
-		//TRACE("Chip config Ver:%x", buffer);
+		TRACE("Chip config Ver:%x", tmp[0]);
 		if (tmp[0] <= GT911_CFG_NUMER)  //Config ver
 		{
-			//TRACE("Sending new config %d", GT911_CFG_NUMER);
+			TRACE("Sending new config %d", GT911_CFG_NUMER);
 			if (!I2C_GT911_SendConfig())
 			{
 				TRACE("GT911 ERROR: sending configration failed");
@@ -507,7 +507,7 @@ bool touchPanelInit(void)
 		else
 		{
 			touchGT911fwver = (tmp[1] << 8) + tmp[0];
-			//TRACE("GT911 FW version: %u", touchGT911fwver);
+			TRACE("GT911 FW version: %u", touchGT911fwver);
 		}
 
 		HAL_Delay(10);
