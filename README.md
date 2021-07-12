@@ -12,3 +12,9 @@ Hookup between RadioMaster TX16S 6-pin FFC touch controller cable to ST Nucleo-F
 * Pin 4 - INT - D12, PA6
 * Pin 5 - !RST - D11, PA7
 * Pin 6 - VDD - +3.3V
+
+<img src="media/Nucleo-F401RE_hookup.jpg" height="400px">
+
+Under `/media` you can find an example I2C trace of 3 taps, created with [Saleae Logic v1.2.29](https://support.saleae.com/logic-software/legacy-software/older-software-releases)
+
+<img src="media/LAtrace_3taps.png">
