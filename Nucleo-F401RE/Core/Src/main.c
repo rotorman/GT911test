@@ -682,7 +682,6 @@ int main(void)
 	if (HAL_GPIO_ReadPin(TOUCH_INT_GPIO_Port, TOUCH_INT_Pin) == GPIO_PIN_SET)
 	{
 		touchPanelRead();
-		HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
 	}
 	HAL_Delay(10);
 
