@@ -15,7 +15,7 @@ Hookup between RadioMaster TX16S 6-pin FFC touch controller cable to ST Nucleo-F
 
 <img src="media/Nucleo-F401RE_hookup.jpg" height="400px">
 
-Via Nucleo Debug Virtual Serial Port (400000 baud 8N1) you get the same debug output as with EdgeTX when build with DEBUG=YES CMake option. Example (single finger tap):
+Via Nucleo Debug Virtual Serial Port (400000 baud 8N1) you get the same debug output as with EdgeTX when built with DEBUG=YES CMake option. Example (single finger tap):
 
 ```
 +1598093ms:  touch state = 0x81
