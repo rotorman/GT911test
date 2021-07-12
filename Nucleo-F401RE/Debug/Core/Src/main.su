@@ -1,0 +1,15 @@
+main.c:331:6:serialPrintf	160	static
+main.c:350:6:TOUCH_AF_INT_Change	32	static
+main.c:361:13:TOUCH_AF_GPIOConfig	32	static
+main.c:381:6:I2C_GT911_ReadRegister	32	static,ignoring_inline_asm
+main.c:403:9:I2C_GT911_WriteRegister	288	static,ignoring_inline_asm
+main.c:426:6:I2C_GT911_SendConfig	16	static
+main.c:452:6:touchPanelInit	16	static
+main.c:530:6:touchPanelDeInit	8	static,ignoring_inline_asm
+main.c:538:6:touchPanelRead	24	static
+main.c:641:5:main	8	static,ignoring_inline_asm
+main.c:698:6:SystemClock_Config	88	static
+main.c:743:13:MX_I2C1_Init	8	static
+main.c:777:13:MX_USART2_UART_Init	8	static
+main.c:810:13:MX_GPIO_Init	48	static
+main.c:871:6:Error_Handler	4	static,ignoring_inline_asm
