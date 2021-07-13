@@ -571,6 +571,8 @@ void touchPanelRead()
 	do {
 		if (!I2C_GT911_ReadRegister(GT911_READ_XY_REG, &state, 1)) {
 			HAL_GPIO_WritePin(LEDred_GPIO_Port, LEDred_Pin, GPIO_PIN_SET);
+		        HAL_GPIO_WritePin(LEDgreen_GPIO_Port, LEDgreen_Pin, GPIO_PIN_RESET);
+		        HAL_GPIO_WritePin(LEDblue_GPIO_Port, LEDblue_Pin, GPIO_PIN_RESET);			
 			touchGT911hiccups++;
 			TRACE("GT911 I2C read XY error");
 			touchPanelDeInit();
@@ -593,6 +595,8 @@ void touchPanelRead()
 			if (!I2C_GT911_ReadRegister(GT911_READ_XY_REG + 1, touchData.data, pointsCount * sizeof(TouchPoint)))
 			{
 				HAL_GPIO_WritePin(LEDred_GPIO_Port, LEDred_Pin, GPIO_PIN_SET);
+		                HAL_GPIO_WritePin(LEDgreen_GPIO_Port, LEDgreen_Pin, GPIO_PIN_RESET);
+		                HAL_GPIO_WritePin(LEDblue_GPIO_Port, LEDblue_Pin, GPIO_PIN_RESET);			
 				touchGT911hiccups++;
 				TRACE("GT911 I2C data read error");
 				touchPanelDeInit();
