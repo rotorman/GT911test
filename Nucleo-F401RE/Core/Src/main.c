@@ -324,8 +324,6 @@ static void MX_I2C1_Init(void);
 #define TRACE_TIME_VALUE      ((float)HAL_GetTick())
 #define CRLF "\r\n"
 
-#define va_start(ap, param) __builtin_va_start(ap, param)
-#define va_end(ap)          __builtin_va_end(ap)
 #define PRINTF_BUFFER_SIZE    128
 
 void serialPrintf(const char * format, ...)
