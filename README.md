@@ -54,3 +54,5 @@ Although I made great care to define all I/O pins correctly, no guarantee that i
 You will see green LED light in normal condition, if a touch hiccup is detected, the LED turns teal. Via AUX1 you can get the same touch debug as with real EdgeTX/OpenTX when firmware is build with DEBUG=YES CMake option. 400000 baud 8N1. Here an example how it looks when the firmware is running on TX16S:
 
 <img src="media/TX16S.jpg" height="500px">
+
+A brief press on power button turn on the test, a press longer than 1 second, turns the radio off.
