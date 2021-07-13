@@ -55,4 +55,4 @@ You will see green LED light in normal condition, if a touch hiccup is detected,
 
 <img src="media/TX16S.jpg" height="500px">
 
-A brief press on power button turn on the test, a press longer than 1 second, turns the radio off.
+A brief press on the power button turns on the radio, a press longer than 1 second, turns the radio off again.
