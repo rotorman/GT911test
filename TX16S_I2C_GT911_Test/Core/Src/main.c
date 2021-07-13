@@ -741,7 +741,7 @@ int main(void)
 	  }
 	  HAL_GPIO_WritePin(LEDblue_GPIO_Port, LEDblue_Pin, GPIO_PIN_RESET);
 
-	  HAL_Delay(100);
+	  HAL_Delay(50);
   }
   /* USER CODE END 3 */
 }
