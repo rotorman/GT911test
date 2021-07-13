@@ -51,7 +51,7 @@ Although I made great care to define all I/O pins correctly, no guarantee that i
 
 **Caution! This code does NO low battery checking, thus better run it solely on freshly charged battery for a limited time, or hook your radio to a power supply, e.g. via top USB-C port**
 
-You will see green LED light in normal condition, if a touch hiccup is detected, the LED turns teal. Via AUX1 you can get the same touch debug as with real EdgeTX/OpenTX when firmware is build with DEBUG=YES CMake option. 400000 baud 8N1. Here an example how it looks when the firmware is running on TX16S:
+You will see green LED light in normal condition, if a touch hiccup is detected, the LED turns red. Via AUX1 you can get the same touch debug as with real EdgeTX/OpenTX when firmware is build with DEBUG=YES CMake option. 400000 baud 8N1. Here an example how it looks when the firmware is running on TX16S:
 
 <img src="media/TX16S.jpg" height="500px">
 
