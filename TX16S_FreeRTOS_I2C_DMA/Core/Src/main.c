@@ -326,14 +326,14 @@ SDRAM_HandleTypeDef hsdram1;
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for TouchTask */
 osThreadId_t TouchTaskHandle;
 const osThreadAttr_t TouchTask_attributes = {
   .name = "TouchTask",
-  .stack_size = 128 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for BinSemI2CCB */
@@ -726,12 +726,6 @@ int main(void)
   MX_USART6_UART_Init();
   MX_FATFS_Init();
   /* USER CODE BEGIN 2 */
-  HAL_GPIO_WritePin(PWRon_GPIO_Port, PWRon_Pin, GPIO_PIN_SET); // Turn on power
-  HAL_GPIO_WritePin(LEDred_GPIO_Port, LEDred_Pin, GPIO_PIN_RESET);
-  HAL_GPIO_WritePin(LEDgreen_GPIO_Port, LEDgreen_Pin, GPIO_PIN_SET);
-  HAL_GPIO_WritePin(LEDblue_GPIO_Port, LEDblue_Pin, GPIO_PIN_RESET);
-  HAL_Delay(1000);
-
   /* USER CODE END 2 */
 
   /* Init scheduler */
@@ -786,7 +780,7 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	osDelay(1);
+    osDelay(pdMS_TO_TICKS(1000));
   }
   /* USER CODE END 3 */
 }
@@ -1597,14 +1591,16 @@ static void MX_GPIO_Init(void)
 void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	BaseType_t xHigherPriorityTaskWoken = false;
-	xSemaphoreGiveFromISR(BinSemI2CCBHandle, &xHigherPriorityTaskWoken);
+	if (BinSemI2CCBHandle)
+		xSemaphoreGiveFromISR(BinSemI2CCBHandle, &xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	BaseType_t xHigherPriorityTaskWoken = false;
-	xSemaphoreGiveFromISR(BinSemI2CCBHandle, &xHigherPriorityTaskWoken);
+	if (BinSemI2CCBHandle)
+		xSemaphoreGiveFromISR(BinSemI2CCBHandle, &xHigherPriorityTaskWoken);
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
@@ -1613,7 +1609,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	if (GPIO_Pin == GPIO_PIN_2)
 	{
 		BaseType_t xHigherPriorityTaskWoken = false;
-		xSemaphoreGiveFromISR(BinSemTouchINTHandle, &xHigherPriorityTaskWoken);
+		if (BinSemTouchINTHandle)
+			xSemaphoreGiveFromISR(BinSemTouchINTHandle, &xHigherPriorityTaskWoken);
 	  	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 	}
 }
@@ -1629,6 +1626,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+  HAL_GPIO_WritePin(PWRon_GPIO_Port, PWRon_Pin, GPIO_PIN_SET); // Turn on power
+  HAL_GPIO_WritePin(LEDred_GPIO_Port, LEDred_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LEDgreen_GPIO_Port, LEDgreen_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LEDblue_GPIO_Port, LEDblue_Pin, GPIO_PIN_RESET);
+
   /* Infinite loop */
   for(;;)
   {
@@ -1639,8 +1641,11 @@ void StartDefaultTask(void *argument)
    		//HAL_GPIO_WritePin(LEDgreen_GPIO_Port, LEDgreen_Pin, GPIO_PIN_RESET);
    		HAL_GPIO_WritePin(LEDblue_GPIO_Port, LEDblue_Pin, GPIO_PIN_SET);
 
+   	    TRACE("defaultTask Stack: %lu", uxTaskGetStackHighWaterMark(defaultTaskHandle));
+   	    TRACE("TouchTask Stack: %lu", uxTaskGetStackHighWaterMark(TouchTaskHandle));
+
    		// Check again in 1 second
-   		osDelay(pdMS_TO_TICKS (1000));
+   		osDelay(pdMS_TO_TICKS(1000));
    		if (HAL_GPIO_ReadPin(PWRswitch_GPIO_Port, PWRswitch_Pin) == GPIO_PIN_RESET)
    		{
    			HAL_GPIO_WritePin(PWRon_GPIO_Port, PWRon_Pin, GPIO_PIN_RESET); // Turn off power
@@ -1648,7 +1653,7 @@ void StartDefaultTask(void *argument)
    	}
    	HAL_GPIO_WritePin(LEDblue_GPIO_Port, LEDblue_Pin, GPIO_PIN_RESET);
 
-   	osDelay(pdMS_TO_TICKS (100));
+   	osDelay(pdMS_TO_TICKS(100));
   }
   /* USER CODE END 5 */
 }
