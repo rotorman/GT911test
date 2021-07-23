@@ -40,22 +40,22 @@ typedef struct {
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define GT911_I2C_ADDR					0x14
-#define GT911_MAX_TP					5
-#define GT911_CFG_NUMER					0x6D
-#define GT911_TIMEOUT					3 // 3ms
+#define GT911_I2C_ADDR                  0x14
+#define GT911_MAX_TP                    5
+#define GT911_CFG_NUMER                 0x6D
+#define GT911_TIMEOUT                   3 // 3ms
 
-#define GT_CTRL_REG 					0x8040
-#define GT_CFGS_REG 					0x8047
-#define GT_CHECK_REG 					0x80FF
-#define GT_PID_REG 						0x8140
+#define GT_CTRL_REG                     0x8040
+#define GT_CFGS_REG                     0x8047
+#define GT_CHECK_REG                    0x80FF
+#define GT_PID_REG                      0x8140
 
-#define GT_GSTID_REG 					0x814E
-#define GT_TP1_REG 						0x8150
-#define GT_TP2_REG 						0x8158
-#define GT_TP3_REG 						0x8160
-#define GT_TP4_REG 						0x8168
-#define GT_TP5_REG 						0x8170
+#define GT_GSTID_REG                    0x814E
+#define GT_TP1_REG                      0x8150
+#define GT_TP2_REG                      0x8158
+#define GT_TP3_REG                      0x8160
+#define GT_TP4_REG                      0x8168
+#define GT_TP5_REG                      0x8170
 
 #define GT911_READ_XY_REG               0x814E
 #define GT911_CLEARBUF_REG              0x814E
@@ -78,12 +78,12 @@ typedef struct {
 //GT911 param table
 const uint8_t TOUCH_GT911_Cfg[] =
 {
-	GT911_CFG_NUMER,// 0x8047 Config version
+	GT911_CFG_NUMER,        // 0x8047 Config version
 	0xE0,			// 0x8048 X output map : x 480
 	0x01,
 	0x10,			// 0x804A Y ouptut max : y 272
 	0x01,
-	GT911_MAX_TP,	// 0x804C Touch number
+	GT911_MAX_TP,	        // 0x804C Touch number
 	0x3C,			// 0x804D Module switch 1 : bit4= xy change Int mode
 	0x20,			// 0x804E Module switch 2
 	0x22,			// 0x804F Shake_Count
@@ -602,7 +602,7 @@ void touchPanelRead()
 			// ready
 			break;
 		}
-		HAL_Delay(1);
+		osDelay(pdMS_TO_TICKS(1));
 	} while (HAL_GetTick() - startReadStatus < GT911_TIMEOUT);
 
 	TRACE("touch state = 0x%x", state);
