@@ -108,6 +108,7 @@ void Error_Handler(void);
 #define StickRH_GPIO_Port GPIOA
 #define TOUCH_INT_Pin GPIO_PIN_2
 #define TOUCH_INT_GPIO_Port GPIOH
+#define TOUCH_INT_EXTI_IRQn EXTI2_IRQn
 #define SWF_Pin GPIO_PIN_3
 #define SWF_GPIO_Port GPIOH
 #define SWEH_Pin GPIO_PIN_4

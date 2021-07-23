@@ -73,6 +73,8 @@ typedef struct {
 #define TPINT_LOW()   HAL_GPIO_WritePin(TOUCH_INT_GPIO_Port, TOUCH_INT_Pin, GPIO_PIN_RESET)
 #define TPINT_HIGH()  HAL_GPIO_WritePin(TOUCH_INT_GPIO_Port, TOUCH_INT_Pin, GPIO_PIN_SET)
 
+#define I2C_TIMEOUT pdMS_TO_TICKS(20)
+
 //GT911 param table
 const uint8_t TOUCH_GT911_Cfg[] =
 {
@@ -339,6 +341,11 @@ osSemaphoreId_t BinSemI2CCBHandle;
 const osSemaphoreAttr_t BinSemI2CCB_attributes = {
   .name = "BinSemI2CCB"
 };
+/* Definitions for BinSemTouchINT */
+osSemaphoreId_t BinSemTouchINTHandle;
+const osSemaphoreAttr_t BinSemTouchINT_attributes = {
+  .name = "BinSemTouchINT"
+};
 /* USER CODE BEGIN PV */
 uint16_t touchGT911fwver = 0;
 uint16_t touchGT911hiccups = 0;
@@ -435,7 +442,7 @@ bool I2C_GT911_ReadRegister(uint16_t reg, uint8_t * buf, uint8_t len)
 		asm("bkpt 255");
 		return false;
 	}
-	if (xSemaphoreTake(BinSemI2CCBHandle, pdMS_TO_TICKS(20)) != pdPASS)
+	if (xSemaphoreTake(BinSemI2CCBHandle, I2C_TIMEOUT) != pdPASS)
 	{
 		TRACE("I2C ERROR: GT911 WriteRegister did not succeed");
 		asm("bkpt 255");
@@ -452,7 +459,7 @@ bool I2C_GT911_WriteRegister(uint16_t reg, uint8_t * buf, uint8_t len)
 		asm("bkpt 255");
 		return false;
 	}
-	if (xSemaphoreTake(BinSemI2CCBHandle, pdMS_TO_TICKS(20)) != pdPASS)
+	if (xSemaphoreTake(BinSemI2CCBHandle, I2C_TIMEOUT) != pdPASS)
 	{
 		TRACE("I2C ERROR: GT911 WriteRegister did not succeed");
 		asm("bkpt 255");
@@ -600,7 +607,7 @@ void touchPanelRead()
 			// ready
 			break;
 		}
-		HAL_Delay(1);
+		osDelay(pdMS_TO_TICKS(1));
 	} while (HAL_GetTick() - startReadStatus < GT911_TIMEOUT);
 
 	TRACE("touch state = 0x%x", state);
@@ -737,6 +744,9 @@ int main(void)
   /* Create the semaphores(s) */
   /* creation of BinSemI2CCB */
   BinSemI2CCBHandle = osSemaphoreNew(1, 1, &BinSemI2CCB_attributes);
+
+  /* creation of BinSemTouchINT */
+  BinSemTouchINTHandle = osSemaphoreNew(1, 1, &BinSemTouchINT_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -1444,13 +1454,11 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(TOUCH_RST_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : TOUCH_INT_Pin PCBREV1_Pin PCBREV2_Pin ROTENCB_Pin
-                           ROTENCA_Pin */
-  GPIO_InitStruct.Pin = TOUCH_INT_Pin|PCBREV1_Pin|PCBREV2_Pin|ROTENCB_Pin
-                          |ROTENCA_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  /*Configure GPIO pin : TOUCH_INT_Pin */
+  GPIO_InitStruct.Pin = TOUCH_INT_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+  HAL_GPIO_Init(TOUCH_INT_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : SWF_Pin SWEH_Pin SWAH_Pin SWBH_Pin
                            SWI_Pin SWJ_Pin */
@@ -1498,6 +1506,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(PWRon_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : PCBREV1_Pin PCBREV2_Pin ROTENCB_Pin ROTENCA_Pin */
+  GPIO_InitStruct.Pin = PCBREV1_Pin|PCBREV2_Pin|ROTENCB_Pin|ROTENCA_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
 
   /*Configure GPIO pins : SWBL_Pin TrainerDetect_Pin */
   GPIO_InitStruct.Pin = SWBL_Pin|TrainerDetect_Pin;
@@ -1572,6 +1586,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
 
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -1590,6 +1608,15 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
 	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+	if (GPIO_Pin == GPIO_PIN_2)
+	{
+		BaseType_t xHigherPriorityTaskWoken = false;
+		xSemaphoreGiveFromISR(BinSemTouchINTHandle, &xHigherPriorityTaskWoken);
+	  	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+	}
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -1605,39 +1632,6 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   for(;;)
   {
-    osDelay(pdMS_TO_TICKS (1000));
-  }
-  /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_TouchTaskEntry */
-/**
-* @brief Function implementing the TouchTask thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_TouchTaskEntry */
-void TouchTaskEntry(void *argument)
-{
-  /* USER CODE BEGIN TouchTaskEntry */
-  osDelay(pdMS_TO_TICKS (50));
-
-  xSemaphoreTake(BinSemI2CCBHandle, pdMS_TO_TICKS(20));
-
-  if (!touchPanelInit())
-  {
-    TRACE("ERROR: touchPanelInit() failed");
-    asm("bkpt 255");
-  }
-
-  /* Infinite loop */
-  for(;;)
-  {
-    if (HAL_GPIO_ReadPin(TOUCH_INT_GPIO_Port, TOUCH_INT_Pin) == GPIO_PIN_SET)
-   	{
-    	touchPanelRead();
-   	}
-
    	// Check Power-Off
    	if (HAL_GPIO_ReadPin(PWRswitch_GPIO_Port, PWRswitch_Pin) == GPIO_PIN_RESET)
    	{
@@ -1654,7 +1648,55 @@ void TouchTaskEntry(void *argument)
    	}
    	HAL_GPIO_WritePin(LEDblue_GPIO_Port, LEDblue_Pin, GPIO_PIN_RESET);
 
-   	osDelay(pdMS_TO_TICKS (50));
+   	osDelay(pdMS_TO_TICKS (100));
+  }
+  /* USER CODE END 5 */
+}
+
+/* USER CODE BEGIN Header_TouchTaskEntry */
+/**
+* @brief Function implementing the TouchTask thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_TouchTaskEntry */
+void TouchTaskEntry(void *argument)
+{
+  /* USER CODE BEGIN TouchTaskEntry */
+  osDelay(pdMS_TO_TICKS (50));
+
+  xSemaphoreTake(BinSemI2CCBHandle, 0);
+
+  if (!touchPanelInit())
+  {
+    TRACE("ERROR: touchPanelInit() failed");
+    asm("bkpt 255");
+  }
+
+  xSemaphoreTake(BinSemTouchINTHandle, 0);
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI2_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI2_IRQn);
+
+  /* Infinite loop */
+  for(;;)
+  {
+	xSemaphoreTake(BinSemTouchINTHandle, portMAX_DELAY);
+	touchPanelRead();
+
+	/*
+	if (touchEventOccured)
+	{
+		touchEventOccured = false;
+		touchPanelRead();
+	}*/
+
+	/*
+    if (HAL_GPIO_ReadPin(TOUCH_INT_GPIO_Port, TOUCH_INT_Pin) == GPIO_PIN_SET)
+   	{
+    	touchPanelRead();
+   	} */
+
   }
   /* USER CODE END TouchTaskEntry */
 }
