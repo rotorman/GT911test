@@ -73,6 +73,8 @@ typedef struct {
 #define TPINT_LOW()   HAL_GPIO_WritePin(TOUCH_INT_GPIO_Port, TOUCH_INT_Pin, GPIO_PIN_RESET)
 #define TPINT_HIGH()  HAL_GPIO_WritePin(TOUCH_INT_GPIO_Port, TOUCH_INT_Pin, GPIO_PIN_SET)
 
+#define I2C_TIMEOUT pdMS_TO_TICKS(20)
+
 //GT911 param table
 const uint8_t TOUCH_GT911_Cfg[] =
 {
@@ -435,7 +437,7 @@ bool I2C_GT911_ReadRegister(uint16_t reg, uint8_t * buf, uint8_t len)
 		asm("bkpt 255");
 		return false;
 	}
-	if (xSemaphoreTake(BinSemI2CCBHandle, pdMS_TO_TICKS(20)) != pdPASS)
+	if (xSemaphoreTake(BinSemI2CCBHandle, I2C_TIMEOUT) != pdPASS) // Wait for semaphore from HAL_I2C_MemRxCpltCallback()
 	{
 		TRACE("I2C ERROR: GT911 WriteRegister did not succeed");
 		asm("bkpt 255");
@@ -452,7 +454,7 @@ bool I2C_GT911_WriteRegister(uint16_t reg, uint8_t * buf, uint8_t len)
 		asm("bkpt 255");
 		return false;
 	}
-	if (xSemaphoreTake(BinSemI2CCBHandle, pdMS_TO_TICKS(20)) != pdPASS)
+	if (xSemaphoreTake(BinSemI2CCBHandle, I2C_TIMEOUT) != pdPASS) // Wait for semaphore from HAL_I2C_MemTxCpltCallback()
 	{
 		TRACE("I2C ERROR: GT911 WriteRegister did not succeed");
 		asm("bkpt 255");
