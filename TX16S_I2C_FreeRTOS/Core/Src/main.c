@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "semphr.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,7 +42,7 @@ typedef struct {
 /* USER CODE BEGIN PD */
 #define GT911_I2C_ADDR					0x14
 #define GT911_MAX_TP					5
-#define GT911_CFG_NUMER					0x6C
+#define GT911_CFG_NUMER					0x6D
 #define GT911_TIMEOUT					3 // 3ms
 
 #define GT_CTRL_REG 					0x8040
@@ -302,6 +302,8 @@ ADC_HandleTypeDef hadc3;
 DAC_HandleTypeDef hdac;
 
 I2C_HandleTypeDef hi2c1;
+DMA_HandleTypeDef hdma_i2c1_rx;
+DMA_HandleTypeDef hdma_i2c1_tx;
 
 LTDC_HandleTypeDef hltdc;
 
@@ -348,6 +350,7 @@ const uint8_t SLIDE_RANGE = 6;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_USB_OTG_FS_PCD_Init(void);
 static void MX_FMC_Init(void);
 static void MX_USART3_UART_Init(void);
@@ -426,9 +429,15 @@ static void TOUCH_AF_GPIOConfig(void)
 
 bool I2C_GT911_ReadRegister(uint16_t reg, uint8_t * buf, uint8_t len)
 {
-	if (HAL_I2C_Mem_Read(&hi2c1, GT911_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_16BIT, buf, len, 100) != HAL_OK)
+	if (HAL_I2C_Mem_Read_DMA(&hi2c1, GT911_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_16BIT, buf, len) != HAL_OK)
 	{
 		TRACE("I2C ERROR: GT911 ReadRegister failed");
+		asm("bkpt 255");
+		return false;
+	}
+	if (xSemaphoreTake(BinSemI2CCBHandle, pdMS_TO_TICKS(20)) != pdPASS)
+	{
+		TRACE("I2C ERROR: GT911 WriteRegister did not succeed");
 		asm("bkpt 255");
 		return false;
 	}
@@ -437,9 +446,15 @@ bool I2C_GT911_ReadRegister(uint16_t reg, uint8_t * buf, uint8_t len)
 
 bool I2C_GT911_WriteRegister(uint16_t reg, uint8_t * buf, uint8_t len)
 {
-	if (HAL_I2C_Mem_Write(&hi2c1, GT911_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_16BIT, buf, len, 100) != HAL_OK)
+	if (HAL_I2C_Mem_Write_DMA(&hi2c1, GT911_I2C_ADDR << 1, reg, I2C_MEMADD_SIZE_16BIT, buf, len) != HAL_OK)
 	{
 		TRACE("I2C ERROR: GT911 WriteRegister failed");
+		asm("bkpt 255");
+		return false;
+	}
+	if (xSemaphoreTake(BinSemI2CCBHandle, pdMS_TO_TICKS(20)) != pdPASS)
+	{
+		TRACE("I2C ERROR: GT911 WriteRegister did not succeed");
 		asm("bkpt 255");
 		return false;
 	}
@@ -504,7 +519,7 @@ bool touchPanelInit(void)
 	if (strcmp((char *) tmp, "911") == 0)
 	{
 		TRACE("GT911 chip detected");
-		tmp[0] = 0X02;
+		tmp[0] = 0x02;
 		if (!I2C_GT911_WriteRegister(GT_CTRL_REG, tmp, 1))
 		{
 			TRACE("GT911 ERROR: write to control register failed");
@@ -689,6 +704,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USB_OTG_FS_PCD_Init();
   MX_FMC_Init();
   MX_USART3_UART_Init();
@@ -1266,6 +1282,25 @@ static void MX_USB_OTG_FS_PCD_Init(void)
 
 }
 
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Stream0_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream0_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream0_IRQn);
+  /* DMA1_Stream6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+
+}
+
 /* FMC initialization function */
 static void MX_FMC_Init(void)
 {
@@ -1541,6 +1576,20 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	BaseType_t xHigherPriorityTaskWoken = false;
+	xSemaphoreGiveFromISR(BinSemI2CCBHandle, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	BaseType_t xHigherPriorityTaskWoken = false;
+	xSemaphoreGiveFromISR(BinSemI2CCBHandle, &xHigherPriorityTaskWoken);
+	portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+}
+
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -1572,6 +1621,8 @@ void TouchTaskEntry(void *argument)
 {
   /* USER CODE BEGIN TouchTaskEntry */
   osDelay(pdMS_TO_TICKS (50));
+
+  xSemaphoreTake(BinSemI2CCBHandle, pdMS_TO_TICKS(20));
 
   if (!touchPanelInit())
   {
